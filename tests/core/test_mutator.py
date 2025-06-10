@@ -1,6 +1,7 @@
 from unittest.mock import MagicMock, patch
+
 from kroft.core.mutator import MutationEngine
-import pytest
+
 
 @patch("kroft.core.mutator.execute_values")
 def test_insert_batch_inserts_rows_and_tracks_count(mock_execute_values):
@@ -53,7 +54,7 @@ def test_update_records_updates_rows_and_tracks_count():
 
     cursor.executemany.assert_called_once()
     args = cursor.executemany.call_args[0]
-    assert f"UPDATE public.sales" in args[0]
+    assert "UPDATE public.sales" in args[0]
     assert len(args[1]) == 3
     assert all(row[1] in ids for row in args[1])
     assert result == 3
@@ -72,7 +73,7 @@ def test_delete_records_deletes_rows_and_tracks_count():
 
     cursor.execute.assert_called_once()
     query, params = cursor.execute.call_args[0]
-    assert f"DELETE FROM public.sales" in query
+    assert "DELETE FROM public.sales" in query
     assert params == (ids,)
     assert result == 2
     assert engine.total_deletes == 2

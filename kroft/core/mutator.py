@@ -1,8 +1,9 @@
-from typing import List, Dict, Tuple
+import random
+from datetime import datetime
+from typing import Dict, List, Tuple
+
 from psycopg2 import sql
 from psycopg2.extras import execute_values
-from datetime import datetime
-import random
 
 
 class MutationEngine:
