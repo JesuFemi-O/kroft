@@ -73,3 +73,58 @@ def test_schema_manager_tracks_active_columns():
     assert "id" in active
     assert "email" in active
     assert isinstance(active["email"], ColumnDefinition)
+
+def test_add_column_adds_column_and_updates_registry():
+    # Arrange
+    conn = MagicMock()
+    cursor = MagicMock()
+    conn.cursor.return_value.__enter__.return_value = cursor
+
+    existing_cols = {
+        "id": ColumnDefinition("id", "UUID", lambda: "abc"),
+        "name": ColumnDefinition("name", "TEXT", lambda: "John")
+    }
+
+    registry = {
+        **existing_cols,
+        "email": ColumnDefinition("email", "TEXT", lambda: "yo@example.com")
+    }
+
+    mgr = SchemaManager(conn, 
+                        schema="public", 
+                        table_name="users", 
+                        columns=existing_cols.copy()
+                        )
+
+    # Act
+    added = mgr.add_column(registry)
+
+    # Assert
+    assert added == "email"
+    assert "email" in mgr.columns
+    cursor.execute.assert_called_once()
+    assert "ADD COLUMN email TEXT" in cursor.execute.call_args[0][0]
+
+def test_drop_column_removes_column_from_registry():
+    # Arrange
+    conn = MagicMock()
+    cursor = MagicMock()
+    conn.cursor.return_value.__enter__.return_value = cursor
+
+    cols = {
+        "id": ColumnDefinition("id", "UUID", lambda: "abc"),
+        "email": ColumnDefinition("email", "TEXT", lambda: "yo@example.com")
+    }
+
+    protected = {"id"}
+
+    mgr = SchemaManager(conn, schema="public", table_name="users", columns=cols.copy())
+
+    # Act
+    dropped = mgr.drop_column(protected_columns=protected)
+
+    # Assert
+    assert dropped == "email"
+    assert "email" not in mgr.columns
+    cursor.execute.assert_called_once()
+    assert "DROP COLUMN email" in cursor.execute.call_args[0][0]
