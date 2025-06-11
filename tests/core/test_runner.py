@@ -1,6 +1,7 @@
 from unittest.mock import MagicMock
-from kroft.core.runner import SimulationRunner
+
 from kroft.core.column import ColumnDefinition
+from kroft.core.runner import SimulationRunner
 
 
 def test_simulation_runner_generates_batches_and_mutates():

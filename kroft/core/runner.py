@@ -1,10 +1,12 @@
 # kroft/core/runner.py
 
 import random
-from typing import List, Dict
-from kroft.core.schema import SchemaManager
-from kroft.core.mutator import MutationEngine
+from typing import Dict, List
+
 from kroft.core.column import ColumnDefinition
+from kroft.core.mutator import MutationEngine
+from kroft.core.schema import SchemaManager
+
 
 class SimulationRunner:
     def __init__(
@@ -39,12 +41,18 @@ class SimulationRunner:
 
             self._maybe_mutate(inserted_ids)
 
-            if self.enable_schema_evolution and batch_num % self.evolution_interval == 0:
+            if (
+                self.enable_schema_evolution 
+                and batch_num % self.evolution_interval == 0
+                ):
                 self._maybe_evolve_schema()
 
     def _generate_batch(self) -> List[dict]:
         return [
-            {col: col_def.generate() for col, col_def in self.schema_mgr.columns.items()}
+            {
+                col: col_def.generate() 
+                for col, col_def in self.schema_mgr.columns.items()
+            }
             for _ in range(self.batch_size)
         ]
 
@@ -56,7 +64,12 @@ class SimulationRunner:
         delete_count = int(len(ids) * 0.1)
 
         update_ids = random.sample(ids, k=update_count) if update_count else []
-        delete_ids = random.sample([i for i in ids if i not in update_ids], k=delete_count) if delete_count else []
+        
+        if delete_count:
+            eligible = [i for i in ids if i not in update_ids]
+            delete_ids = random.sample(eligible, k=delete_count)
+        else:
+            delete_ids = []
 
         self.mutator._update_records(update_ids)
         self.mutator._delete_records(delete_ids)
