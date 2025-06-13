@@ -15,10 +15,6 @@ class BatchGenerator:
         Args:
             schema: A dictionary of column name -> ColumnDefinition.
             use_registry: If True, loads schema from the registered column registry.
-
-        Raises:
-            ValueError: If neither schema nor use_registry is provided.
-            TypeError: If the schema is not a dict of ColumnDefinition objects.
         """
         if schema is not None:
             self.schema = schema
@@ -35,12 +31,19 @@ class BatchGenerator:
             if not isinstance(col, ColumnDefinition):
                 raise TypeError(f"Schema entry '{name}' is not a ColumnDefinition.")
 
+    def _generate_value(self, column: str) -> Any:
+        """Generate a single value for the given column name."""
+        col_def = self.schema.get(column)
+        if not col_def:
+            raise ValueError(f"No column definition found for column '{column}'")
+        return col_def.generate()
+
     def generate_batch(self, batch_size: int = 1) -> List[Dict[str, Any]]:
         rows = []
         for _ in range(batch_size):
             row = {
-                name: col_def.generate()
-                for name, col_def in self.schema.items()
+                name: self._generate_value(name)
+                for name in self.schema
             }
             rows.append(row)
         return rows

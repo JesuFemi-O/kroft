@@ -46,3 +46,15 @@ def test_batch_generator_rejects_invalid_column_type():
     schema = {"bad": "not_a_column"}
     with pytest.raises(TypeError):
         BatchGenerator(schema=schema)
+
+def test_generate_value_for_column():
+    schema = {
+        "name": ColumnDefinition("name", "TEXT", lambda: "John")
+    }
+
+    generator = BatchGenerator(schema)
+    value = generator._generate_value("name")
+    assert value == "John"
+
+    with pytest.raises(ValueError):
+        generator._generate_value("nonexistent")
