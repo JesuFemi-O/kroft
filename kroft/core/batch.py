@@ -50,3 +50,10 @@ class BatchGenerator:
             }
             rows.append(row)
         return rows
+    
+    def get_modifiable_columns(self, exclude: Optional[List[str]] = None) -> List[str]:
+        exclude = set(exclude or [])
+        return [
+            name for name, col in self.schema.items()
+            if not col.reserved and not col.protected and name not in exclude
+        ]
