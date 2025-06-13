@@ -55,8 +55,10 @@ class MutationEngine:
 
         operation = random.choice(["update", "delete"])
         subset = random.sample(inserted_ids, max(1, len(inserted_ids) // 4))
+        print(f"Picking operation next - {operation}")
 
         if operation == "update":
+            print(f"Updating {len(subset)} records: {subset}")
             updated_count = self._update_records(subset)
             self.total_updates += updated_count
             return updated_count, 0
@@ -69,10 +71,12 @@ class MutationEngine:
         if not ids or not self.generator:
             return 0
 
-        modifiable_columns = list(self.generator.schema.keys())
-        modifiable_columns = [
-            col for col in modifiable_columns if col != self.primary_key
-            ]
+        modifiable_columns = self.generator.get_modifiable_columns(
+            exclude=[self.primary_key]
+            )
+        
+        if not modifiable_columns:
+            return 0
 
         with self.conn.cursor() as cur:
             for row_id in ids:
@@ -106,13 +110,17 @@ class MutationEngine:
     def _delete_records(self, ids: List[str]) -> int:
         if not ids:
             return 0
+        
 
+        # Fetch column type from the generator's schema
+        pk_col_def = self.generator.schema.get(self.primary_key)
+        pk_type = pk_col_def.sql_type.upper() if pk_col_def else "TEXT"
+
+        # Add cast only if UUID
+        cast = "::uuid[]" if pk_type == "UUID" else ""
+        query = f'DELETE FROM "{self.schema}"."{self.table_name}" WHERE "{self.primary_key}" = ANY(%s{cast});'  # noqa: E501
         with self.conn.cursor() as cur:
-            query = sql.SQL("DELETE FROM {}.{} WHERE {} = ANY(%s)").format(
-                sql.Identifier(self.schema),
-                sql.Identifier(self.table_name),
-                sql.Identifier(self.primary_key)
-            )
+
             cur.execute(query, (ids,))
             self.conn.commit()
 

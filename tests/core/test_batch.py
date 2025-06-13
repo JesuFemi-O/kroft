@@ -58,3 +58,41 @@ def test_generate_value_for_column():
 
     with pytest.raises(ValueError):
         generator._generate_value("nonexistent")
+
+
+def test_get_modifiable_columns_excludes_reserved_protected_and_explicit():
+    schema = {
+        "id": ColumnDefinition("id", "UUID", lambda: "1", reserved=True),
+        "updated_at": ColumnDefinition(
+            "updated_at", "TIMESTAMP", lambda: "now", protected=True
+        ),
+        "price": ColumnDefinition("price", "FLOAT", lambda: 19.99),
+        "quantity": ColumnDefinition("quantity", "INT", lambda: 2),
+        "internal_flag": ColumnDefinition("internal_flag", "BOOLEAN", lambda: False)
+    }
+
+    generator = BatchGenerator(schema)
+
+    # exclude "internal_flag" dynamically
+    modifiable = generator.get_modifiable_columns(exclude=["internal_flag"])
+
+    # "id", "updated_at", and "internal_flag" are excluded
+    assert set(modifiable) == {"price", "quantity"}  
+
+
+def test_modifiable_columns_respect_reserved_protected_and_exclude():
+    schema = {
+        "id": ColumnDefinition("id", "UUID", lambda: "1", reserved=True),
+        "updated_at": ColumnDefinition(
+            "updated_at", "TIMESTAMP", lambda: "now", protected=True
+        ),
+        "price": ColumnDefinition("price", "FLOAT", lambda: 19.99),
+        "quantity": ColumnDefinition("quantity", "INT", lambda: 2),
+        "internal_flag": ColumnDefinition("internal_flag", "BOOLEAN", lambda: False)
+    }
+
+    generator = BatchGenerator(schema)
+    modifiable = generator.get_modifiable_columns(exclude=["internal_flag"])
+
+    # "id" is reserved, "updated_at" is protected, "internal_flag" is excluded
+    assert set(modifiable) == {"price", "quantity"}

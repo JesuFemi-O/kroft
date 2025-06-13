@@ -99,7 +99,19 @@ def test_delete_records_deletes_rows_and_tracks_count():
     cursor = MagicMock()
     conn.cursor.return_value.__enter__.return_value = cursor
 
-    engine = MutationEngine(conn, schema="public", table_name="sales", primary_key="id")
+    # Mock generator with schema containing a UUID column
+    mock_generator = MagicMock()
+    mock_generator.schema = {
+        "id": ColumnDefinition("id", "UUID", lambda: "uuid")
+    }
+
+    engine = MutationEngine(
+        conn, 
+        schema="public", 
+        table_name="sales", 
+        primary_key="id", 
+        generator=mock_generator
+    )
     ids = ["id4", "id5"]
 
     result = engine._delete_records(ids)
@@ -113,3 +125,43 @@ def test_delete_records_deletes_rows_and_tracks_count():
     assert params == (ids,)
     assert result == 2
     assert engine.total_deletes == 2
+
+
+
+@patch("kroft.core.mutator.random")
+def test_update_skips_protected_and_reserved_columns(mock_random):
+    mock_random.random.return_value = 0.2
+    mock_random.choice.side_effect = ["update", "quantity"]
+    mock_random.sample.return_value = ["row-123"]
+
+    conn = MagicMock()
+    cursor = MagicMock()
+    conn.cursor.return_value.__enter__.return_value = cursor
+
+    schema = {
+        "id": ColumnDefinition("id", "UUID", lambda: "row-123", reserved=True),
+        "updated_at": ColumnDefinition(
+            "updated_at", "TIMESTAMP", lambda: "now", protected=True
+        ),
+        "price": ColumnDefinition("price", "FLOAT", lambda: 99.9),
+        "quantity": ColumnDefinition("quantity", "INT", lambda: 10),
+    }
+
+    generator = BatchGenerator(schema)
+    engine = MutationEngine(
+        conn=conn,
+        schema="public",
+        table_name="sales",
+        primary_key="id",
+        update_column="updated_at",
+        generator=generator
+    )
+
+    row_ids = ["row-123"]
+    assert generator.get_modifiable_columns(exclude=["id"]) == ["price", "quantity"]
+    updated, deleted = engine.maybe_mutate_batch(row_ids)
+
+    assert cursor.execute.called, "Expected UPDATE query to be executed"
+    assert updated == 1
+    assert deleted == 0
+

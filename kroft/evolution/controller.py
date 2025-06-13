@@ -4,7 +4,7 @@ from typing import Dict, List, Optional
 from kroft.core.schema import SchemaManager
 
 
-class EvolutionController:
+class SchemaEvolutionController:
     def __init__(
         self,
         manager: SchemaManager,
@@ -23,13 +23,12 @@ class EvolutionController:
 
         self.num_additions = 0
         self.num_drops = 0
-        self.evolution_log: List[Dict[str, str]] = []
+        self.evolution_log: List[Dict[str, str]] = []  # 📝 Paper trail
 
     def should_evolve(self, batch_number: int) -> bool:
-        return (
-            batch_number % self.evolution_interval == 0 and
-            random.random() < self.evolution_probability
-        )
+        if batch_number % self.evolution_interval != 0:
+            return False
+        return random.random() < self.evolution_probability
 
     def choose_action(self) -> str:
         can_add = (
