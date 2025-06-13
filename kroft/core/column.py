@@ -7,15 +7,20 @@ class ColumnDefinition:
         name: str,
         sql_type: str,
         generator: Callable[[], Any],
-        constraints: Optional[str] = None
+        constraints: Optional[str] = None,
+        reserved: bool = False,
+        protected: bool = False,
     ):
         self.name = name
         self.sql_type = sql_type
         self.generator = generator
         self.constraints = constraints or ""
+        self.reserved = reserved
+        self.protected = protected
 
     def generate(self) -> Any:
         return self.generator()
 
     def ddl(self) -> str:
-        return f"{self.name} {self.sql_type} {self.constraints}".strip()
+        parts = [self.name, self.sql_type, self.constraints.strip()]
+        return " ".join(p for p in parts if p)

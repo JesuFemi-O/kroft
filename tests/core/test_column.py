@@ -37,3 +37,15 @@ def test_column_definition_ddl_generation():
     ddl = col.ddl()
     assert ddl == "sku TEXT PRIMARY KEY"
     assert re.match(r"^sku\s+TEXT\s+PRIMARY KEY$", ddl)
+
+def test_column_definition_with_reserved_and_protected():
+    col = ColumnDefinition(
+        name="created_at",
+        sql_type="TIMESTAMP",
+        generator=lambda: "2025-01-01T00:00:00Z",
+        reserved=True,
+        protected=True
+    )
+
+    assert col.reserved is True
+    assert col.protected is True

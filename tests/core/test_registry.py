@@ -24,3 +24,11 @@ def test_register_column_with_constraints():
     col_def = get_registered_columns()["id"]
     assert col_def.constraints == "PRIMARY KEY"
     assert col_def.ddl() == "id UUID PRIMARY KEY"
+
+def test_register_column_sets_protected_flag():
+    @register_column(name="created_by", sql_type="TEXT", protected=True)
+    def gen_user():
+        return "system"
+
+    col_def = get_registered_columns()["created_by"]
+    assert col_def.protected is True
