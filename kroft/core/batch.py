@@ -37,6 +37,9 @@ class BatchGenerator:
         if not col_def:
             raise ValueError(f"No column definition found for column '{column}'")
         return col_def.generate()
+    
+    def generate_value(self, column: str) -> Any:
+        return self._generate_value(column)
 
     def generate_batch(self, batch_size: int = 1) -> List[Dict[str, Any]]:
         rows = []

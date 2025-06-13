@@ -1,16 +1,29 @@
 import random
-from datetime import datetime
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple
 
 from psycopg2 import sql
 from psycopg2.extras import execute_values
 
+from kroft.core.batch import BatchGenerator
+
 
 class MutationEngine:
-    def __init__(self, conn, schema: str, table_name: str):
+    def __init__(
+        self,
+        conn,
+        schema: str,
+        table_name: str,
+        primary_key: str = "id",
+        update_column: Optional[str] = None,
+        generator: Optional[BatchGenerator] = None
+    ):
         self.conn = conn
         self.schema = schema
         self.table_name = table_name
+        self.primary_key = primary_key
+        self.update_column = update_column
+        self.generator = generator
+
         self.total_inserts = 0
         self.total_updates = 0
         self.total_deletes = 0
@@ -19,18 +32,16 @@ class MutationEngine:
         if not rows:
             return []
 
-        inserted_ids = [row["id"] for row in rows]
+        inserted_ids = [row[self.primary_key] for row in rows]
         self.total_inserts += len(rows)
 
         with self.conn.cursor() as cur:
             columns = rows[0].keys()
-            query = sql.SQL("INSERT INTO {}.{} ({}) VALUES ({})").format(
+            query = sql.SQL("INSERT INTO {}.{} ({}) VALUES %s").format(
                 sql.Identifier(self.schema),
                 sql.Identifier(self.table_name),
-                sql.SQL(", ").join(map(sql.Identifier, columns)),
-                sql.SQL(", ").join(sql.Placeholder() * len(columns))
+                sql.SQL(", ").join(map(sql.Identifier, columns))
             )
-
             values = [[row[col] for col in columns] for row in rows]
             execute_values(cur, query, values)
 
@@ -38,59 +49,78 @@ class MutationEngine:
 
         return inserted_ids
 
-    def get_insert_count(self) -> int:
-        return self.total_inserts
-    
     def maybe_mutate_batch(self, inserted_ids: List[str]) -> Tuple[int, int]:
         if not inserted_ids or random.random() > 0.5:
-            return (0, 0)
+            return 0, 0
 
         operation = random.choice(["update", "delete"])
         subset = random.sample(inserted_ids, max(1, len(inserted_ids) // 4))
 
         if operation == "update":
-            return (self._update_records(subset), 0)
+            updated_count = self._update_records(subset)
+            self.total_updates += updated_count
+            return updated_count, 0
         else:
-            return (0, self._delete_records(subset))
-    
+            deleted_count = self._delete_records(subset)
+            self.total_deletes += deleted_count
+            return 0, deleted_count
+
     def _update_records(self, ids: List[str]) -> int:
-        if not ids:
+        if not ids or not self.generator:
             return 0
 
-        updates = []
-        for _id in ids:
-            updates.append((
-                _id,
-                datetime.utcnow()  # updated_at
-            ))
+        modifiable_columns = list(self.generator.schema.keys())
+        modifiable_columns = [
+            col for col in modifiable_columns if col != self.primary_key
+            ]
 
         with self.conn.cursor() as cur:
-            cur.executemany(
-                f"""
-                UPDATE {self.schema}.{self.table_name}
-                SET updated_at = %s
-                WHERE id = %s
-                """,
-                [(u[1], u[0]) for u in updates]  # (updated_at, id)
-            )
+            for row_id in ids:
+                col = random.choice(modifiable_columns)
+                val = self.generator.generate_value(col)
+
+                if self.update_column:
+                    query = sql.SQL(
+                        "UPDATE {}.{} SET {} = %s, {} = now() WHERE {} = %s"
+                    ).format(
+                        sql.Identifier(self.schema),
+                        sql.Identifier(self.table_name),
+                        sql.Identifier(col),
+                        sql.Identifier(self.update_column),
+                        sql.Identifier(self.primary_key)
+                    )
+                    cur.execute(query, (val, row_id))
+                else:
+                    query = sql.SQL("UPDATE {}.{} SET {} = %s WHERE {} = %s").format(
+                        sql.Identifier(self.schema),
+                        sql.Identifier(self.table_name),
+                        sql.Identifier(col),
+                        sql.Identifier(self.primary_key)
+                    )
+                    cur.execute(query, (val, row_id))
+
             self.conn.commit()
 
-        self.total_updates += len(updates)
-        return len(updates)
+        return len(ids)
 
     def _delete_records(self, ids: List[str]) -> int:
         if not ids:
             return 0
 
         with self.conn.cursor() as cur:
-            cur.execute(
-                f"""
-                DELETE FROM {self.schema}.{self.table_name}
-                WHERE id = ANY(%s)
-                """,
-                (ids,)
+            query = sql.SQL("DELETE FROM {}.{} WHERE {} = ANY(%s)").format(
+                sql.Identifier(self.schema),
+                sql.Identifier(self.table_name),
+                sql.Identifier(self.primary_key)
             )
+            cur.execute(query, (ids,))
             self.conn.commit()
 
-        self.total_deletes += len(ids)
         return len(ids)
+
+    def get_counters(self) -> Dict[str, int]:
+        return {
+            "total_inserts": self.total_inserts,
+            "total_updates": self.total_updates,
+            "total_deletes": self.total_deletes,
+        }
