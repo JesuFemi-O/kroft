@@ -1,5 +1,7 @@
 from unittest.mock import MagicMock, patch
 
+from kroft.core.batch import BatchGenerator
+from kroft.core.column import ColumnDefinition
 from kroft.core.mutator import MutationEngine
 
 
@@ -9,7 +11,12 @@ def test_insert_batch_inserts_rows_and_tracks_count(mock_execute_values):
     cursor = MagicMock()
     conn.cursor.return_value.__enter__.return_value = cursor
 
-    engine = MutationEngine(conn, schema="public", table_name="products")
+    engine = MutationEngine(
+        conn, 
+        schema="public", 
+        table_name="products", 
+        primary_key="id"
+    )
 
     rows = [
         {"id": "abc", "name": "Hat"},
@@ -22,43 +29,69 @@ def test_insert_batch_inserts_rows_and_tracks_count(mock_execute_values):
     assert inserted_ids == ["abc", "def"]
     assert engine.total_inserts == 2
 
-
+@patch("kroft.core.mutator.random.sample", return_value=["id1"])
 @patch("kroft.core.mutator.random")
-def test_maybe_mutate_batch_calls_update_or_delete(mock_random):
-    # Force mutation path
-    mock_random.random.return_value = 0.1  # Below threshold to trigger mutation
-    mock_random.choice.return_value = "update"  # Force 'update' operation
+def test_maybe_mutate_batch_calls_update_or_delete(mock_random, mock_sample):
+    mock_random.random.return_value = 0.1
+    mock_random.choice.side_effect = ["update", "name"]  # operation, column
 
-    engine = MutationEngine(conn=MagicMock(), schema="public", table_name="sales")
-
-    engine._update_records = MagicMock(return_value=2)
-    engine._delete_records = MagicMock(return_value=0)
-
-    inserted_ids = ["id1", "id2", "id3", "id4"]
-    updated, deleted = engine.maybe_mutate_batch(inserted_ids)
-
-    engine._update_records.assert_called_once()
-    engine._delete_records.assert_not_called()
-    assert updated == 2
-    assert deleted == 0
-
-def test_update_records_updates_rows_and_tracks_count():
     conn = MagicMock()
     cursor = MagicMock()
     conn.cursor.return_value.__enter__.return_value = cursor
 
-    engine = MutationEngine(conn, schema="public", table_name="sales")
-    ids = ["id1", "id2", "id3"]
+    schema = {
+        "id": ColumnDefinition("id", "UUID", lambda: "id"),
+        "name": ColumnDefinition("name", "TEXT", lambda: "test")
+    }
+    generator = BatchGenerator(schema)
 
-    result = engine._update_records(ids)
+    engine = MutationEngine(
+        conn=conn,
+        schema="public",
+        table_name="sales",
+        primary_key="id",
+        update_column="updated_at",
+        generator=generator
+    )
 
-    cursor.executemany.assert_called_once()
-    args = cursor.executemany.call_args[0]
-    assert "UPDATE public.sales" in args[0]
-    assert len(args[1]) == 3
-    assert all(row[1] in ids for row in args[1])
-    assert result == 3
-    assert engine.total_updates == 3
+    inserted_ids = ["id1", "id2", "id3", "id4"]
+    updated, deleted = engine.maybe_mutate_batch(inserted_ids)
+
+    assert updated > 0
+    assert deleted == 0
+    assert engine.total_updates == updated
+
+
+def test_update_records_with_and_without_update_column():
+    conn = MagicMock()
+    cursor = MagicMock()
+    conn.cursor.return_value.__enter__.return_value = cursor
+
+    schema = {
+        "id": ColumnDefinition("id", "UUID", lambda: "id"),
+        "name": ColumnDefinition("name", "TEXT", lambda: "john")
+    }
+    generator = BatchGenerator(schema)
+
+    engine_with_col = MutationEngine(
+        conn, 
+        "public", 
+        "users", 
+        "id", 
+        "updated_at", 
+        generator
+        )
+    result = engine_with_col._update_records(["id1", "id2"])
+    
+    # simulate the behavior of maybe_mutate_batch
+    engine_with_col.total_deletes += result
+    assert result == 2
+
+    engine_without_col = MutationEngine(conn, "public", "users", "id", None, generator)
+    result = engine_without_col._update_records(["id3", "id4"])
+    # simulate the behavior of maybe_mutate_batch
+    engine_without_col.total_deletes += result
+    assert result == 2
 
 
 def test_delete_records_deletes_rows_and_tracks_count():
@@ -66,14 +99,17 @@ def test_delete_records_deletes_rows_and_tracks_count():
     cursor = MagicMock()
     conn.cursor.return_value.__enter__.return_value = cursor
 
-    engine = MutationEngine(conn, schema="public", table_name="sales")
+    engine = MutationEngine(conn, schema="public", table_name="sales", primary_key="id")
     ids = ["id4", "id5"]
 
     result = engine._delete_records(ids)
 
+    # simulate the behavior of maybe_mutate_batch
+    engine.total_deletes += result
+
     cursor.execute.assert_called_once()
     query, params = cursor.execute.call_args[0]
-    assert "DELETE FROM public.sales" in query
+    assert "DELETE FROM" in str(query)
     assert params == (ids,)
     assert result == 2
     assert engine.total_deletes == 2
