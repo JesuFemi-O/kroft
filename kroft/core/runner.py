@@ -12,6 +12,22 @@ logger = logging.getLogger(__name__)
 
 
 class SimulationRunner:
+    """Orchestrates a full data simulation: generate batches, mutate, evolve.
+
+    Composes :class:`~kroft.core.schema.SchemaManager`,
+    :class:`~kroft.core.mutator.MutationEngine`, and
+    :class:`~kroft.core.evolution.EvolutionController` into a single
+    run loop. For finer-grained control over mutations or evolution, drive
+    each component directly instead.
+
+    Args:
+        schema_mgr: Manages the table schema and active columns.
+        mutator: Handles insert, update, and delete operations.
+        evolution_controller: Decides when and how to evolve the schema.
+        total_records: Total number of rows to generate across all batches.
+        batch_size: Number of rows per batch.
+    """
+
     def __init__(
         self,
         schema_mgr: SchemaManager,

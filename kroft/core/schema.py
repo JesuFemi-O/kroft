@@ -5,6 +5,20 @@ from kroft.core.column import ColumnDefinition
 
 
 class SchemaManager:
+    """Manages the physical database schema for a single table.
+
+    Tracks active vs. reserved columns, issues DDL against the database,
+    and maintains a version history of schema changes.
+
+    Args:
+        conn: A live ``psycopg2`` connection.
+        schema: PostgreSQL schema name (e.g. ``"public"``).
+        table_name: Name of the table to manage.
+        columns: Full column pool — both active and reserved — keyed by
+            column name. Reserved columns are excluded from the initial
+            schema and can be promoted later via :meth:`add_column`.
+    """
+
     def __init__(
         self,
         conn,

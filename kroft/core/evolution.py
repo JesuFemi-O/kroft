@@ -5,6 +5,26 @@ from kroft.core.schema import SchemaManager
 
 
 class EvolutionController:
+    """Controls when and how the table schema evolves during a simulation.
+
+    On each batch, call :meth:`evolve` — it decides probabilistically whether
+    to promote a reserved column (add) or drop a non-protected one, subject
+    to the configured limits.
+
+    Args:
+        manager: The :class:`~kroft.core.schema.SchemaManager` whose schema
+            this controller will evolve.
+        evolution_interval: Only consider evolving every N batches.
+        evolution_probability: Probability of evolution firing when the
+            interval is reached (0.0–1.0).
+        add_probability: When evolution fires and both add and drop are
+            possible, probability of choosing add over drop (0.0–1.0).
+        max_additions: Maximum number of columns that can be added over the
+            lifetime of the simulation.
+        max_drops: Maximum number of columns that can be dropped over the
+            lifetime of the simulation.
+    """
+
     def __init__(
         self,
         manager: SchemaManager,
