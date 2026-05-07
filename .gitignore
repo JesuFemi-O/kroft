@@ -10,3 +10,6 @@ wheels/
 .venv
 venv
 
+# MkDocs build output
+site/
+

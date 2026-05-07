@@ -1,5 +1,5 @@
 import random
-from typing import Dict, List, Optional, Set
+from typing import Any, Dict, List, Optional, Set
 
 from kroft.core.column import ColumnDefinition
 
@@ -21,7 +21,7 @@ class SchemaManager:
 
     def __init__(
         self,
-        conn,
+        conn: Any,
         schema: str,
         table_name: str,
         columns: Dict[str, ColumnDefinition]

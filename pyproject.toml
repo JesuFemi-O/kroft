@@ -27,6 +27,10 @@ dev = [
     "pytest>=8.0",
     "ruff>=0.11",
 ]
+docs = [
+    "mkdocs-material>=9.7.6",
+    "mkdocstrings[python]>=1.0.4",
+]
 
 [project.urls]
 Repository = "https://github.com/JesuFemi-O/kroft"

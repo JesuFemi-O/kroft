@@ -1,0 +1,51 @@
+site_name: Kroft
+site_description: Synthetic data generation and schema evolution simulation for testing data pipelines
+site_url: https://jesufemi-o.github.io/kroft
+repo_url: https://github.com/JesuFemi-O/kroft
+repo_name: JesuFemi-O/kroft
+
+theme:
+  name: material
+  palette:
+    - scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.sections
+    - navigation.top
+    - content.code.copy
+    - search.highlight
+
+nav:
+  - Home: index.md
+  - Crash Course: crash-course.md
+  - Advanced Usage: advanced-usage.md
+  - API Reference: api-reference.md
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          options:
+            show_source: false
+            show_root_heading: true
+            heading_level: 2
+            docstring_style: google
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.superfences
+  - pymdownx.inlinehilite
+  - admonition
+  - tables
