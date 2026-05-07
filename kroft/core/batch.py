@@ -4,18 +4,20 @@ from kroft.core.column import ColumnDefinition
 
 
 class BatchGenerator:
+    """Generates synthetic rows from a column schema.
+
+    Args:
+        schema: Dictionary mapping column name to :class:`ColumnDefinition`.
+            Provide this or set ``use_registry=True``.
+        use_registry: If ``True``, loads the schema from the global column
+            registry populated via :func:`~kroft.core.registry.register_column`.
+    """
+
     def __init__(
         self,
         schema: Optional[Dict[str, ColumnDefinition]] = None,
         use_registry: bool = False
     ):
-        """
-        Initialize a batch generator.
-
-        Args:
-            schema: A dictionary of column name -> ColumnDefinition.
-            use_registry: If True, loads schema from the registered column registry.
-        """
         if schema is not None:
             self.schema = schema
         elif use_registry:

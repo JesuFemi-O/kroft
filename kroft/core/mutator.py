@@ -11,6 +11,27 @@ logger = logging.getLogger(__name__)
 
 
 class MutationEngine:
+    """Performs insert, update, and delete operations against a live table.
+
+    Supports four composable simulation scenarios:
+
+    - **Insert only** — call :meth:`insert_batch` and nothing else.
+    - **Insert + Update** — call :meth:`insert_batch` then :meth:`update_batch`.
+    - **Insert + Update + Delete** — chain all three methods.
+    - **Probabilistic mutations** — use :meth:`maybe_mutate_batch` with
+      configurable probability and fraction parameters.
+
+    Args:
+        conn: A live ``psycopg2`` connection.
+        schema: PostgreSQL schema name (e.g. ``"public"``).
+        table_name: Target table name.
+        primary_key: Name of the primary key column. Defaults to ``"id"``.
+        update_column: Optional timestamp column set to ``now()`` on every
+            update (e.g. ``"updated_at"``).
+        generator: :class:`BatchGenerator` used to produce replacement values
+            during updates. Required for update operations.
+    """
+
     def __init__(
         self,
         conn,
