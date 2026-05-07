@@ -190,7 +190,9 @@ print(engine.get_counters())
 Or let Kroft pick randomly between update and delete on each batch:
 
 ```python
-# 80% chance something happens; when it does, 70% update / 30% delete
+# 80% chance something happens; when it does, one operation is picked at
+# random (50/50 update vs delete). If update: affects 20% of the batch.
+# If delete: affects 10% of the batch.
 engine.maybe_mutate_batch(
     inserted_ids,
     probability=0.8,
