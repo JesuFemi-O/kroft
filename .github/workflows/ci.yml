@@ -62,10 +62,26 @@ jobs:
       - name: 🦖 Install uv
         uses: astral-sh/setup-uv@v5
 
+      - name: 🔍 Check if version already exists on PyPI
+        id: version_check
+        run: |
+          VERSION=$(grep '^version' pyproject.toml | head -1 | sed 's/.*"\(.*\)"/\1/')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://pypi.org/pypi/kroft/$VERSION/json)
+          if [ "$STATUS" = "200" ]; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "Version $VERSION already exists on PyPI — skipping publish."
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "Version $VERSION not found on PyPI — will publish."
+          fi
+
       - name: 📦 Build package
+        if: steps.version_check.outputs.exists == 'false'
         run: uv build
 
       - name: 🚀 Publish to PyPI
+        if: steps.version_check.outputs.exists == 'false'
         run: uv publish
         env:
           UV_PUBLISH_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
