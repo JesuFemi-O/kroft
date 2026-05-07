@@ -70,7 +70,7 @@ for batch_num in range(1, 21):
 
 ## Production Readiness Assessment
 
-> Last assessed: 2026-05-07
+> Last updated: 2026-05-07
 
 This section tracks the current production readiness of the library. It is updated as work progresses.
 
@@ -83,39 +83,40 @@ This section tracks the current production readiness of the library. It is updat
 | Test Coverage | **Ready** | 34 passing unit tests, good isolation, edge cases covered |
 | CI/CD | **Ready** | Lint (Ruff) + pytest on push/PR; missing coverage reporting |
 | Security | **Ready** | Parameterised SQL throughout; no hardcoded secrets in library code |
-| Mutation API | **Needs Work** | `maybe_mutate_batch()` has hardcoded probabilities; no per-scenario control |
-| Logging | **Needs Work** | Stray `print()` in `mutator.py`; should use `logging` |
-| Documentation | **Needs Work** | README minimal; most public classes lack docstrings |
-| Packaging | **Blocker** | `pyproject.toml` has placeholder description, empty `dependencies`, no license or classifiers |
-| Dependency Management | **Needs Work** | `psycopg2-binary` missing from `pyproject.toml`; no dev/runtime split |
+| Mutation API | **Ready** | `update_batch`, `delete_batch`, and configurable `maybe_mutate_batch` — all four scenarios composable |
+| Logging | **Ready** | `logging` used throughout; no stray `print()` calls |
+| Documentation | **Ready** | Docstrings on all public classes; crash course and advanced usage guides in `docs/` |
+| Packaging | **Ready** | `pyproject.toml` has description, license, classifiers, authors, and runtime deps declared |
+| Dependency Management | **Ready** | Fully migrated to `uv`; runtime and dev deps split; `uv.lock` committed |
 
 ### Detail
 
-**Packaging (Blocker)**
-`pyproject.toml` has `description = "Add your description here"` and `dependencies = []`. `psycopg2-binary` is a runtime requirement but is only declared in `requirements.txt`. No license, classifiers, or author metadata. Not publishable to PyPI in current state.
+**Packaging** ✅
+`pyproject.toml` now has proper description, license (MIT), classifiers, authors, keywords, and `psycopg2-binary>=2.9,<3` declared as a runtime dependency. PyPI-publishable.
 
-**Dependency Management**
-`requirements.txt` mixes runtime and dev dependencies with no separation. `pyproject.toml` should declare `psycopg2-binary>=2.9,<3` under `dependencies` and move `pytest`/`ruff` to a `[dev]` extra.
+**Dependency Management** ✅
+Fully migrated to `uv`. `requirements.txt` removed. Runtime and dev deps are split — `psycopg2-binary` under `[dependencies]`, `pytest`/`ruff` under `[project.optional-dependencies] dev`. `uv.lock` committed as the canonical lockfile.
 
-**Mutation API**
-`maybe_mutate_batch()` hardcodes a 50% chance of skipping, a 50/50 update/delete split, and always mutates 25% of the batch. Users cannot opt into insert-only, insert+update, or insert+update+delete scenarios without calling private methods (`_update_records`, `_delete_records`). Needs configurable public methods per operation.
+**Mutation API** ✅
+`MutationEngine` now exposes `update_batch()` and `delete_batch()` with configurable `fraction` and `probability` params. `maybe_mutate_batch()` is fully configurable via `allow_updates`, `allow_deletes`, `update_fraction`, `delete_fraction`, and `probability`. All four scenarios are composable without calling private methods.
 
-**Logging**
-`mutator.py` lines 58 and 61 use `print()`. These leak to stdout and cannot be suppressed by callers. Should use `logging.getLogger(__name__)`.
+**Logging** ✅
+All `print()` calls replaced with `logging.getLogger(__name__)` throughout.
 
-**Documentation**
-Most public classes (`ColumnDefinition`, `SchemaManager`, `MutationEngine`, `EvolutionController`, `SimulationRunner`) have no docstrings. README previously had no usage examples or feature overview.
+**Documentation** ✅
+All six public classes have docstrings. `docs/crash-course.md` walks through all four scenarios. `docs/advanced-usage.md` covers the registry, custom loops, `SimulationRunner`, logging setup, and schema history.
 
 **CI/CD**
-Workflow runs lint and tests on push to `main` and `feat/**` branches and on PRs. Missing: coverage reporting, multi-version Python matrix, and a publish step.
+Migrated to `astral-sh/setup-uv` with `uv sync --extra dev` and `uv run` for lint and tests. Triggers extended to `fix/**` and `chore/**` branches. Missing: coverage reporting, multi-version Python matrix, publish step.
 
-### Roadmap (rough priority order)
+### Roadmap
 
-- [ ] Fix `MutationEngine` public API — expose per-operation methods with configurable probabilities
-- [ ] Replace `print()` with `logging` in `mutator.py`
-- [ ] Fix `pyproject.toml` — description, license, classifiers, runtime dependencies
-- [ ] Split `requirements.txt` into runtime and dev
-- [ ] Add docstrings to all public classes
-- [ ] Expand README with full usage examples per scenario
+- [x] Fix `MutationEngine` public API — expose per-operation methods with configurable probabilities
+- [x] Replace `print()` with `logging` in `mutator.py`
+- [x] Fix `pyproject.toml` — description, license, classifiers, runtime dependencies
+- [x] Migrate to `uv`; split runtime and dev deps
+- [x] Add docstrings to all public classes
+- [x] Add `docs/` with crash course and advanced usage guides
 - [ ] Add coverage reporting to CI
-- [ ] Consider multi-version Python matrix in CI
+- [ ] Multi-version Python matrix in CI (3.10, 3.11, 3.12)
+- [ ] Publish to PyPI

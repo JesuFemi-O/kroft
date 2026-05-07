@@ -1,12 +1,43 @@
 [project]
 name = "kroft"
 version = "0.1.0"
-description = "Add your description here"
+description = "Synthetic data generation and schema evolution simulation for testing data pipelines"
 readme = "README.md"
-requires-python = ">=3.10.7"
-dependencies = []
+license = { text = "MIT" }
+authors = [{ name = "Jesufemi Ogunwede", email = "ogunwedejesufemi@gmail.com" }]
+requires-python = ">=3.10"
+keywords = ["data", "testing", "synthetic", "schema", "etl", "cdc"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Testing",
+    "Topic :: Database",
+]
+dependencies = [
+    "psycopg2-binary>=2.9,<3",
+]
 
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.11",
+]
+
+[project.urls]
+Repository = "https://github.com/JesuFemi-O/kroft"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-ra -q"
+
+[tool.ruff]
+line-length = 88
