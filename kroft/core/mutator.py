@@ -1,6 +1,6 @@
 import logging
 import random
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from psycopg2 import sql
 from psycopg2.extras import execute_values
@@ -34,7 +34,7 @@ class MutationEngine:
 
     def __init__(
         self,
-        conn,
+        conn: Any,
         schema: str,
         table_name: str,
         primary_key: str = "id",
