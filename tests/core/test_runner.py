@@ -1,11 +1,12 @@
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 from kroft.core.column import ColumnDefinition
-from kroft.core.evolution import EvolutionController
 from kroft.core.runner import SimulationRunner
 
 
-def _make_runner(schema_mgr, mutator, evolution_controller, total_records=10, batch_size=5):
+def _make_runner(
+    schema_mgr, mutator, evolution_controller, total_records=10, batch_size=5
+):
     return SimulationRunner(
         schema_mgr=schema_mgr,
         mutator=mutator,
@@ -27,7 +28,9 @@ def test_simulation_runner_generates_batches_and_mutates():
     }
     mutator.insert_batch.return_value = ["id1", "id2", "id3", "id4", "id5"]
 
-    runner = _make_runner(schema_mgr, mutator, evolution_controller, total_records=10, batch_size=5)
+    runner = _make_runner(
+        schema_mgr, mutator, evolution_controller, total_records=10, batch_size=5
+    )
     runner.run()
 
     assert mutator.insert_batch.call_count == 2
@@ -47,7 +50,9 @@ def test_simulation_runner_triggers_schema_evolution():
     }
     mutator.insert_batch.return_value = ["id1", "id2", "id3"]
 
-    runner = _make_runner(schema_mgr, mutator, evolution_controller, total_records=5, batch_size=1)
+    runner = _make_runner(
+        schema_mgr, mutator, evolution_controller, total_records=5, batch_size=1
+    )
     runner.run()
 
     assert evolution_controller.evolve.call_count == 5
@@ -59,7 +64,9 @@ def test_simulation_runner_skips_when_zero_records():
     evolution_controller = MagicMock()
     schema_mgr.columns = {"id": ColumnDefinition("id", "UUID", lambda: "abc")}
 
-    runner = _make_runner(schema_mgr, mutator, evolution_controller, total_records=0, batch_size=5)
+    runner = _make_runner(
+        schema_mgr, mutator, evolution_controller, total_records=0, batch_size=5
+    )
     runner.run()
 
     mutator.insert_batch.assert_not_called()
@@ -75,7 +82,9 @@ def test_simulation_runner_handles_empty_insert_batch():
     schema_mgr.columns = {"id": ColumnDefinition("id", "UUID", lambda: "abc")}
     mutator.insert_batch.return_value = []
 
-    runner = _make_runner(schema_mgr, mutator, evolution_controller, total_records=5, batch_size=5)
+    runner = _make_runner(
+        schema_mgr, mutator, evolution_controller, total_records=5, batch_size=5
+    )
     runner.run()
 
     mutator._update_records.assert_not_called()
@@ -94,7 +103,9 @@ def test_simulation_runner_delegates_evolution_to_controller():
     }
     mutator.insert_batch.return_value = ["a"]
 
-    runner = _make_runner(schema_mgr, mutator, evolution_controller, total_records=3, batch_size=1)
+    runner = _make_runner(
+        schema_mgr, mutator, evolution_controller, total_records=3, batch_size=1
+    )
     runner.run()
 
     # Evolution decisions are fully delegated to the controller
