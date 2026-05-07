@@ -1,6 +1,6 @@
 [project]
 name = "kroft"
-version = "0.1.0"
+version = "0.1.1"
 description = "Synthetic data generation and schema evolution simulation for testing data pipelines"
 readme = "README.md"
 license = { text = "MIT" }
