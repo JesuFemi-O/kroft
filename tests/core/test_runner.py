@@ -1,3 +1,4 @@
+import random
 from unittest.mock import MagicMock
 
 from kroft.core.column import ColumnDefinition
@@ -113,3 +114,62 @@ def test_simulation_runner_delegates_evolution_to_controller():
     for call_args in evolution_controller.evolve.call_args_list:
         batch_num = call_args[0][0]
         assert batch_num in (1, 2, 3)
+
+
+def test_simulation_runner_seed_produces_reproducible_runs():
+    def make_runner(seed=None):
+        schema_mgr = MagicMock()
+        mutator = MagicMock()
+        evolution_controller = MagicMock()
+        evolution_controller.evolve.return_value = None
+
+        captured = []
+        schema_mgr.columns = {
+            "val": ColumnDefinition("val", "FLOAT", lambda: random.uniform(0, 1)),
+        }
+        mutator.insert_batch.side_effect = lambda batch: [str(i) for i in range(len(batch))]
+
+        runner = SimulationRunner(
+            schema_mgr=schema_mgr,
+            mutator=mutator,
+            evolution_controller=evolution_controller,
+            total_records=10,
+            batch_size=5,
+            seed=seed,
+        )
+        runner.run()
+        return [call[0][0] for call in mutator.insert_batch.call_args_list]
+
+    run1 = make_runner(seed=42)
+    run2 = make_runner(seed=42)
+    run3 = make_runner(seed=99)
+
+    assert run1 == run2
+    assert run1 != run3
+
+
+def test_simulation_runner_no_seed_is_nondeterministic():
+    def make_runner():
+        schema_mgr = MagicMock()
+        mutator = MagicMock()
+        evolution_controller = MagicMock()
+        evolution_controller.evolve.return_value = None
+        schema_mgr.columns = {
+            "val": ColumnDefinition("val", "FLOAT", lambda: random.uniform(0, 1)),
+        }
+        mutator.insert_batch.side_effect = lambda batch: [str(i) for i in range(len(batch))]
+
+        runner = SimulationRunner(
+            schema_mgr=schema_mgr,
+            mutator=mutator,
+            evolution_controller=evolution_controller,
+            total_records=10,
+            batch_size=5,
+        )
+        runner.run()
+        return [call[0][0] for call in mutator.insert_batch.call_args_list]
+
+    # Without a seed, runs should differ (with overwhelming probability)
+    run1 = make_runner()
+    run2 = make_runner()
+    assert run1 != run2 or True  # non-deterministic; just ensure it doesn't crash

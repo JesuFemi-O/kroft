@@ -2,7 +2,7 @@
 
 import logging
 import random
-from typing import List
+from typing import List, Optional
 
 from kroft.core.evolution import EvolutionController
 from kroft.core.mutator import MutationEngine
@@ -26,6 +26,7 @@ class SimulationRunner:
         evolution_controller: Decides when and how to evolve the schema.
         total_records: Total number of rows to generate across all batches.
         batch_size: Number of rows per batch.
+        seed: Optional integer seed for ``random`` to make runs reproducible.
     """
 
     def __init__(
@@ -35,6 +36,7 @@ class SimulationRunner:
         evolution_controller: EvolutionController,
         total_records: int = 10_000,
         batch_size: int = 500,
+        seed: Optional[int] = None,
     ):
         self.schema_mgr = schema_mgr
         self.mutator = mutator
@@ -42,8 +44,11 @@ class SimulationRunner:
         self.total_records = total_records
         self.batch_size = batch_size
         self.total_batches = total_records // batch_size
+        self.seed = seed
 
     def run(self):
+        if self.seed is not None:
+            random.seed(self.seed)
         for batch_num in range(1, self.total_batches + 1):
             batch = self._generate_batch()
             inserted_ids = self.mutator.insert_batch(batch)
