@@ -148,6 +148,26 @@ print(engine.get_counters())
 
 `SimulationRunner` uses `maybe_mutate_batch` with its defaults — 50% chance of mutation, 20% update fraction, 10% delete fraction, updates and deletes both enabled. To change this behaviour, roll your own loop.
 
+### Reproducible runs
+
+Pass `seed` to get the same data and mutation pattern on every run — useful when you need to reproduce a specific failure or share a scenario with a colleague:
+
+```python
+runner = SimulationRunner(
+    schema_mgr=manager,
+    mutator=engine,
+    evolution_controller=controller,
+    total_records=10_000,
+    batch_size=500,
+    seed=42,
+)
+runner.run()  # identical output every time
+```
+
+Omit `seed` (the default) to keep the normal non-deterministic behaviour.
+
+> **Note:** `seed` controls Python's `random` module. If your column generators use `uuid.uuid4()` or `numpy.random`, those are unaffected and will still produce different values each run.
+
 ---
 
 ## Configuring logging
