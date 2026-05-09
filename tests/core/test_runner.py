@@ -123,11 +123,12 @@ def test_simulation_runner_seed_produces_reproducible_runs():
         evolution_controller = MagicMock()
         evolution_controller.evolve.return_value = None
 
-        captured = []
         schema_mgr.columns = {
             "val": ColumnDefinition("val", "FLOAT", lambda: random.uniform(0, 1)),
         }
-        mutator.insert_batch.side_effect = lambda batch: [str(i) for i in range(len(batch))]
+        mutator.insert_batch.side_effect = (
+            lambda batch: [str(i) for i in range(len(batch))]
+        )
 
         runner = SimulationRunner(
             schema_mgr=schema_mgr,
@@ -157,7 +158,9 @@ def test_simulation_runner_no_seed_is_nondeterministic():
         schema_mgr.columns = {
             "val": ColumnDefinition("val", "FLOAT", lambda: random.uniform(0, 1)),
         }
-        mutator.insert_batch.side_effect = lambda batch: [str(i) for i in range(len(batch))]
+        mutator.insert_batch.side_effect = (
+            lambda batch: [str(i) for i in range(len(batch))]
+        )
 
         runner = SimulationRunner(
             schema_mgr=schema_mgr,
